@@ -17,10 +17,9 @@ void main()
     // Sun orientation
     float sunOrientation = dot(uSunDirection,normal);
 
-
+    // base color texture
     vec3 dayColor = texture(uDayTexture, vUv).rgb;
     color = dayColor;
-
 
     // Atmosphere
     float atmosphereDayMix = smoothstep(-0.5,1.0,sunOrientation);
@@ -30,13 +29,8 @@ void main()
     float fresnel = dot(viewDirection,normal) + 1.0;
     fresnel = pow(fresnel,2.0);
 
-    float falloff = smoothstep(1.0,0.8,fresnel);
-
-
     color = mix(color,atmosphereColor,fresnel * atmosphereDayMix);
-
    
-
     // Final color
     gl_FragColor = vec4(color, 1.0);
     #include <tonemapping_fragment>

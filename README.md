@@ -8,7 +8,7 @@ An interactive 3D visualization of a laser-based defense system, where intercept
 - [x] Placing objects on the sphere
 - [x] drawing curves between 2 points with animations
 - [x] Atmosphere shader + post processing
-- [ ] Objects following a curve
+- [x] Objects following a curve
 - [ ] Models for the project
 - [ ] Interceptor w/ systems
 - [ ] Physics based calculations

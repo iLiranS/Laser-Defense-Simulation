@@ -1,6 +1,6 @@
 import type React from "react"
 import * as THREE from 'three'
-import { sphericalToCartesian } from "./utils/coordconvertions"
+import { sphericalToCartesian } from "../utils/coordconvertions"
 import { useRef } from "react"
 
 type surfaceObjectProps = {
@@ -13,6 +13,8 @@ type surfaceObjectProps = {
     scale?: number
 }
 
+// TODO: make optional mesh as props - defaults to cube
+
 
 const SurfaceObject: React.FC<surfaceObjectProps> = (
     { lat, long, altitude = 0, radius = 1, id, onDelete, scale }) => {
@@ -22,8 +24,8 @@ const SurfaceObject: React.FC<surfaceObjectProps> = (
 
 
     // position
-    const meshHeight = scale ?? 0.05
-    const { x, y, z } = sphericalToCartesian(lat, long, radius, altitude, meshHeight)
+    const meshScale = scale ?? 0.05
+    const { x, y, z } = sphericalToCartesian(lat, long, radius, altitude, meshScale)
 
 
     // rotation
@@ -44,7 +46,7 @@ const SurfaceObject: React.FC<surfaceObjectProps> = (
                 position={[x, y, z]}
                 quaternion={q}
             >
-                <boxGeometry args={[meshHeight, meshHeight, meshHeight]} />
+                <boxGeometry args={[meshScale, meshScale, meshScale]} />
                 <meshBasicMaterial color={[1 * 7, 0.05 * 7, 0.05 * 7]} />
             </mesh>
         </>

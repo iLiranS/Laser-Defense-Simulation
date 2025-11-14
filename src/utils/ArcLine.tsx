@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from 'react'
 const UP_VECTOR = new THREE.Vector3(0, 1, 0);
 const fps = 30
 
+//TODO: Make the trajectory prediction optional using state manager (zustand probably)
+
 // Define the props for our new component
 type ArcLineProps = {
     source: THREE.Vector3
@@ -86,6 +88,11 @@ const ArcLine: React.FC<ArcLineProps> = ({
     const totalLength = useMemo(() => curve.getLength(), [curve]);
     const progress = timer / animationLength
 
+    // dashed pattern size (a small fraction of the total length)
+    const dashSizeVal = useMemo(() => Math.max(totalLength * 0.02, 0.001), [totalLength]);
+    const gapSizeVal = useMemo(() => Math.max(totalLength * 0.02, 0.001), [totalLength]);
+
+
 
     useEffect(() => {
         if (timer >= animationLength) {
@@ -106,14 +113,29 @@ const ArcLine: React.FC<ArcLineProps> = ({
 
     return (
         <>
+            {/* PREDICTION LINE*/}
+            <Line
+                points={points}
+                color={[0.57 * 3, 0.44 * 3, 0.86 * 3] as unknown as THREE.ColorRepresentation}
+                lineWidth={lineWidth / 2}
+                dashed={true}
+                dashSize={dashSizeVal}
+                gapSize={gapSizeVal}
+                dashOffset={0}
+                polygonOffset={true}
+                polygonOffsetFactor={5} // In front of its border
+            />
+            {/* --- PROGRESS --- */}
             <Line
                 points={points}
                 color={color as THREE.ColorRepresentation}
                 lineWidth={lineWidth}
                 dashed={true}
-                dashSize={totalLength}   // Dash is the total length
-                gapSize={totalLength}    // Gap is the total length
+                dashSize={totalLength}
+                gapSize={totalLength}
                 dashOffset={totalLength * (1 - progress)}
+                polygonOffset={true}
+                polygonOffsetFactor={-10} // In front of everything
             />
 
         </>

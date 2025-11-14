@@ -23,3 +23,21 @@ export function xyzToLatLon(x: number, y: number, z: number, radius = 1) {
     };
 }
 
+export function randomPointOnSphere(radius: number): [number, number, number] {
+    // random angles
+    const u = Math.random();
+    const v = Math.random();
+
+    const theta = 2 * Math.PI * u;         // azimuth
+    const phi = Math.acos(2 * v - 1);      // polar
+
+    const x = radius * Math.sin(phi) * Math.cos(theta);
+    const y = radius * Math.sin(phi) * Math.sin(theta);
+    const z = radius * Math.cos(phi);
+
+    return [x, y, z];
+}
+
+// example
+const [num1, num2, num3] = randomPointOnSphere(1);
+console.log(num1, num2, num3);

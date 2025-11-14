@@ -3,11 +3,12 @@ import { Perf } from 'r3f-perf'
 import PostProcessingComponent from './Environment/PostProcessing'
 
 import * as THREE from 'three'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import Atmosphere from './Environment/Atmosphere'
 import Earth from './objects/Earth/Earth'
 import Missile from './objects/Missile'
 import EarthPlaceholder from './objects/Earth/EarthPlaceholder'
+import { randomPointOnSphere } from './utils/coordconvertions'
 
 
 
@@ -15,11 +16,25 @@ import EarthPlaceholder from './objects/Earth/EarthPlaceholder'
 
 
 const radius = 1 // later to Zustand ?
-const source4 = new THREE.Vector3(0.21431884007046528, 0.5918442365614065, -0.7834620823242794)
-const target4 = new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.49053478413761004)
+
+// const source1 = new THREE.Vector3(0.21431884007046528, 0.5918442365614065, -0.7834620823242794)
+// const target1 = new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.49053478413761004)
+
+
+
 
 
 const Experience = () => {
+    const [locationsPairs] = useState(() => Array.from({ length: 10 }, () => {
+        const res = randomPointOnSphere(1)
+        const res2 = randomPointOnSphere(1)
+        return {
+            loc1: new THREE.Vector3(res[0], res[1], res[2]),
+            loc2: new THREE.Vector3(res2[0], res2[1], res2[2]),
+        }
+    }));
+
+
 
 
     return (
@@ -35,9 +50,9 @@ const Experience = () => {
             <Suspense fallback={<EarthPlaceholder radius={radius} />}>
                 <Atmosphere radius={radius * 1.03} />
                 <Earth radius={radius} />
+                {locationsPairs.map((locationsPair, index) => <Missile key={index + "locs"} source={locationsPair.loc1} target={locationsPair.loc2} />)}
             </Suspense>
 
-            <Missile source={source4} target={target4} />
 
 
 

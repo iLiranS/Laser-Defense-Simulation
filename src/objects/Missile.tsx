@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react"
 
 import ArcLine from "../utils/ArcLine"
 import * as THREE from 'three'
-import SurfaceObject from "../SurfaceObject"
+import SurfaceObject from "./SurfaceObject"
 import { xyzToLatLon } from "../utils/coordconvertions"
 
 
@@ -20,6 +20,7 @@ type missileProps = {
 const Missile: React.FC<missileProps> = ({ source, target }) => {
     const [position, setPosition] = useState(source)
     const [didLand, setDidLand] = useState(false)
+    const randomTime = useMemo(() => Math.random() * 5000 + 5000, [])
 
     const onPositionUpdateHandler = useCallback((position: THREE.Vector3) => setPosition(position), [])
     const onFinishUpdateHandler = useCallback(() => { setDidLand(true) }, [])
@@ -46,7 +47,7 @@ const Missile: React.FC<missileProps> = ({ source, target }) => {
                 <>
                     <mesh position={position}>
                         <boxGeometry args={[0.01, 0.01, 0.01]} />
-                        <meshBasicMaterial />
+                        <meshBasicMaterial color={[1 * 3, 1 * 3, 1 * 3]} />
                     </mesh>
 
                     <ArcLine
@@ -54,9 +55,9 @@ const Missile: React.FC<missileProps> = ({ source, target }) => {
                         target={target}
                         onPositionUpdate={onPositionUpdateHandler}
                         radius={1}
-                        animationLength={10000}
-                        lineWidth={2}
-                        color={'coral'}
+                        animationLength={randomTime}
+                        lineWidth={3}
+                        color={[1 * 4, 0.2 * 4, 0.1 * 4]}
                         onFinishUpdate={onFinishUpdateHandler}
                     />
                 </>
