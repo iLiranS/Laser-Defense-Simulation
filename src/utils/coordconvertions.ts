@@ -23,4 +23,3 @@ export function xyzToLatLon(x: number, y: number, z: number, radius = 1) {
     };
 }
 
-console.log(sphericalToCartesian(0.5470442886667538, -0.6083265708512016, 1, 0, 0.01))

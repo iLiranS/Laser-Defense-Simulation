@@ -9,7 +9,7 @@ type surfaceObjectProps = {
     altitude?: number,
     radius?: number,
     id: number,
-    onDelete: (id: number) => void
+    onDelete?: (id: number) => void
     scale?: number
 }
 
@@ -34,7 +34,8 @@ const SurfaceObject: React.FC<surfaceObjectProps> = (
 
     // delete handler
     const deleteObjectHandler = () => {
-        onDelete(id)
+        if (onDelete)
+            onDelete(id)
     }
 
     return (

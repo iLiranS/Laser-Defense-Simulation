@@ -22,6 +22,7 @@ const AtmosphereMaterial = shaderMaterial(
     },
     vertexShader,
     fragmentShader,
+
 )
 extend({ AtmosphereMaterial })
 
@@ -31,8 +32,10 @@ const Atmosphere: React.FC<atmosphereProps> = ({ radius }) => {
         <mesh>
             <sphereGeometry args={[radius, 64, 64]} />
             <atmosphereMaterial
-                transparent
                 side={THREE.BackSide}
+                transparent
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
             />
         </mesh>
     )

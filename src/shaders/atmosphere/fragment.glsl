@@ -29,11 +29,10 @@ void main()
     // float alpha = edgeAlpha * dayAlpha; // fade in day and dissappear at night    
     float alpha = edgeAlpha;
 
-    // I reduce the alpha here on purpose so the atmosphere will be very subtle
 
 
     // Final color
-    gl_FragColor = vec4(color, alpha);
+    gl_FragColor = vec4(color , alpha );
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
 }

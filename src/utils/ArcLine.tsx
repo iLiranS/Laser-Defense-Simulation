@@ -13,9 +13,10 @@ type ArcLineProps = {
     target: THREE.Vector3
     radius: number
     animationLength: number
-    // You can pass any other <Line> props
     color?: THREE.ColorRepresentation | [number, number, number]
     lineWidth?: number
+    onPositionUpdate: (position: THREE.Vector3) => void
+    onFinishUpdate: () => void
 }
 
 const ArcLine: React.FC<ArcLineProps> = ({
@@ -24,22 +25,13 @@ const ArcLine: React.FC<ArcLineProps> = ({
     radius,
     animationLength,
     color = 'white',
-    lineWidth = 2
+    lineWidth = 2,
+    onPositionUpdate,
+    onFinishUpdate
 }) => {
     const [timer, setTimer] = useState(0)
 
-    useEffect(() => {
-        if (timer >= animationLength) return
 
-        const interval = setInterval(() => {
-            setTimer(prev => {
-                const newTimer = prev + (1000 / fps)
-                return newTimer < animationLength ? newTimer : animationLength
-            })
-        }, 1000 / fps)
-
-        return () => clearInterval(interval)
-    }, [animationLength, timer])
 
     // 1. We now need the curve itself, not just the points
     const curve = useMemo(() => {
@@ -95,16 +87,36 @@ const ArcLine: React.FC<ArcLineProps> = ({
     const progress = timer / animationLength
 
 
+    useEffect(() => {
+        if (timer >= animationLength) {
+            onFinishUpdate()
+            return
+        }
+
+        const interval = setInterval(() => {
+            onPositionUpdate(curve.getPoint(timer / animationLength))
+            setTimer(prev => {
+                const newTimer = prev + (1000 / fps)
+                return newTimer < animationLength ? newTimer : animationLength
+            })
+        }, 1000 / fps)
+
+        return () => clearInterval(interval)
+    }, [animationLength, timer, curve, onPositionUpdate, onFinishUpdate])
+
     return (
-        <Line
-            points={points}
-            color={color as THREE.ColorRepresentation}
-            lineWidth={lineWidth}
-            dashed={true}
-            dashSize={totalLength}   // Dash is the total length
-            gapSize={totalLength}    // Gap is the total length
-            dashOffset={totalLength * (1 - progress)}
-        />
+        <>
+            <Line
+                points={points}
+                color={color as THREE.ColorRepresentation}
+                lineWidth={lineWidth}
+                dashed={true}
+                dashSize={totalLength}   // Dash is the total length
+                gapSize={totalLength}    // Gap is the total length
+                dashOffset={totalLength * (1 - progress)}
+            />
+
+        </>
     )
 }
 

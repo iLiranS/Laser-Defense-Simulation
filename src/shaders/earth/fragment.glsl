@@ -35,7 +35,7 @@ void main()
 
     color = mix(color,atmosphereColor,fresnel * atmosphereDayMix);
 
-
+   
 
     // Final color
     gl_FragColor = vec4(color, 1.0);

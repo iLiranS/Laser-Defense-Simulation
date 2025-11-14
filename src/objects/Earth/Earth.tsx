@@ -1,7 +1,7 @@
 import { shaderMaterial, useTexture } from "@react-three/drei"
-import type { sphereCoords } from "./types/global"
-import earthVertexShader from './shaders/earth/vertex.glsl'
-import earthFragmentShader from './shaders/earth/fragment.glsl'
+import type { sphereCoords } from "../../types/global"
+import earthVertexShader from '../../shaders/earth/vertex.glsl'
+import earthFragmentShader from '../../shaders/earth/fragment.glsl'
 import { extend } from "@react-three/fiber"
 import * as THREE from 'three'
 import { useRef } from "react"
@@ -10,7 +10,7 @@ import { useRef } from "react"
 
 type earthProps = {
     radius: number
-    addObject: (coords: sphereCoords) => void
+    addObject?: (coords: sphereCoords) => void
 }
 
 const earthParameters = {
@@ -39,9 +39,12 @@ const Earth: React.FC<earthProps> = ({ radius, addObject }) => {
 
 
 
+
+
     return (
         <mesh ref={earthRef} onClick={(e) => {
             e.stopPropagation();
+            if (!addObject) return
             const clickPosition = e.point;
             const lat = Math.asin(clickPosition.y / radius);
             const long = Math.atan2(clickPosition.z, clickPosition.x);
