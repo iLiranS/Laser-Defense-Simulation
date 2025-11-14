@@ -19,6 +19,7 @@ declare module "@react-three/fiber" {
             uAtmosphereDayColor: THREE.Color,
             uAtmosphereTwilightColor: THREE.Color,
             uSunDirection: THREE.Vector3
-        }
+        };
+        earthMaterial: ShaderMaterialProps
     }
 }

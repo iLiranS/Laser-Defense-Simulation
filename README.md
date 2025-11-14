@@ -18,7 +18,7 @@ An interactive 3D visualization of a laser-based defense system, where intercept
 ## Tech Stack
 
 Three.js + React Three Fiber (R3F) + Drei + Zustand + TailwindCSS
-## Demo
+## Demo (WIP)
 ![Laser Defense Demo](public/preview.gif)
 
 

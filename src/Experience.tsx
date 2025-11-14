@@ -1,4 +1,4 @@
-import { OrbitControls, Stars, useTexture } from '@react-three/drei'
+import { OrbitControls, Stars } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import PostProcessingComponent from './Environment/PostProcessing'
 
@@ -10,13 +10,15 @@ import { useState } from 'react'
 import ArcLine from './utils/ArcLine'
 import { xyzToLatLon } from './utils/coordconvertions'
 import Atmosphere from './Environment/Atmosphere'
+import Earth from './Earth'
+import type { sphereCoords } from './types/global'
 
 
 
 // import * as THREE from 'three'
 // import SphereParticles from './SphereParticles'
 
-type sphereCoords = { long: number, lat: number }
+
 const radius = 1
 
 /**
@@ -50,7 +52,6 @@ const target4 = new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.4905
 const Experience = () => {
     // type the ref so null is allowed
     const [objects, setObjects] = useState<sphereCoords[]>([source1Coords, target1Coords, source2Coords, target2Coords, source3Coords, target3Coords])
-    const countriesMap = useTexture('./10k_map_min.jpg')
     // const { long, lat, altitude, radius } = useControls({
     //     long: {
     //         value: 0,
@@ -74,6 +75,10 @@ const Experience = () => {
         })
     }
 
+    const addObjectHandler = (coords: sphereCoords) => {
+        setObjects(prev => [...prev, coords]);
+    }
+
     return (
         <>
             {/* Environment related */}
@@ -85,26 +90,13 @@ const Experience = () => {
             <Atmosphere radius={radius * 1.04} />
             <PostProcessingComponent />
 
-
-
-            <mesh onClick={(e) => {
-                e.stopPropagation();
-                const clickPosition = e.point;
-                const lat = Math.asin(clickPosition.y / radius);
-                const long = Math.atan2(clickPosition.z, clickPosition.x);
-                console.log(lat, long)
-                setObjects(prev => [...prev, { lat, long }]);
-
-            }} castShadow>
-                <sphereGeometry args={[radius, 128, 64]} />
-                <meshBasicMaterial map={countriesMap} color={[1, 1, 1]} toneMapped={false} />
-            </mesh>
+            <Earth radius={radius} addObject={addObjectHandler} />
 
             <ArcLine
                 source={source}
                 target={target}
                 radius={radius}
-                color={[0.8 * 5, 0.2 * 5, 0.2 * 5]}
+                color={'coral'}
                 lineWidth={2}
                 animationLength={3000}
             />
@@ -112,15 +104,15 @@ const Experience = () => {
                 source={source2}
                 target={target2}
                 radius={radius}
-                color={[0.8 * 5, 0.2 * 5, 0.2 * 5]}
+                color={'coral'}
                 lineWidth={2}
-                animationLength={10000}
+                animationLength={4000}
             />
             <ArcLine
                 source={source3}
                 target={target3}
                 radius={radius}
-                color={[0.8 * 5, 0.2 * 5, 0.2 * 5]}
+                color={'coral'}
                 lineWidth={2}
                 animationLength={5000}
             />
@@ -128,7 +120,7 @@ const Experience = () => {
                 source={source4}
                 target={target4}
                 radius={radius}
-                color={[0.8 * 5, 0.2 * 5, 0.2 * 5]}
+                color={'coral'}
                 lineWidth={2}
                 animationLength={5000}
             />
