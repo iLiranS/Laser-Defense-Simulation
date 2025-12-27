@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 // here we will calculate velocity along surface, relative to surface, horizontal distane
+// will be accessed as missile.phys later on
 export function calculateProjectileData(startPos: THREE.Vector3, targetPos: THREE.Vector3, speed: number, gravity: number, missileType?: 0 | 1) {
     const radius = startPos.length(); // getting the sphere radius according to position length - it would be 1 in our case.
 

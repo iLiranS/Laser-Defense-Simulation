@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 
 
+
 export type InterceptionResult = {
     hasIntercept: boolean;
     interceptorPos?: THREE.Vector3;
@@ -22,6 +23,9 @@ export function calculateMissileFate(
 
     // Optimization: Create a scratch vector to avoid garbage collection
     const currentPoint = new THREE.Vector3();
+
+
+
 
     // 1. Iterate through the curve from Source (t=0) to Target (t=1)
     // let's detect from t=0.05 up to t=0.95 to avoid "too early" and "too late" to detection
