@@ -1,20 +1,26 @@
 import * as THREE from 'three';
 
 /**
- * Predicts impact position given detection position and velocity.
+ * Predicts impact position and TTI (time to impact) given detection position and velocity.
+ * NOTE : it's 3D space so we find the rotation axis using cross product and rotate the position vector.
  */
+export interface ImpactPrediction {
+    impactPosition: THREE.Vector3;
+    timeToImpact: number; // in seconds
+}
+
 export function predictMissileImpact(
     detectedPos: THREE.Vector3,
     detectedVel: THREE.Vector3,
     gravity: number = 2,
     planetRadius: number = 1
-): THREE.Vector3 | null {
+): ImpactPrediction | null {
 
-    // 1. some context
+    // 1. some environmental context
     const distFromCenter = detectedPos.length();
     const currentHeight = distFromCenter - planetRadius;
     // If it's already on the ground (or below), return current position, nothing to work with.
-    if (currentHeight <= 0.001) return detectedPos.clone();
+    if (currentHeight <= 0.001) return { impactPosition: detectedPos.clone(), timeToImpact: 0 };
 
     // 2. Find the 3D velocity - x,y into x,y,z using "up direction"
 
@@ -24,6 +30,7 @@ export function predictMissileImpact(
     // We project the Velocity vector onto the Up vector (Dot Product).
     // If result is positive, it's flying up. If negative, it's falling.
     const current_v_y = detectedVel.dot(upDir);
+
     // 2.2 FIND v_x (Horizontal Speed)
     // We remove the vertical component from the total velocity. What's left is horizontal.
     // Vector_Horizontal = Velocity - (v_y * UpDir)
@@ -40,6 +47,7 @@ export function predictMissileImpact(
 
     const discriminant = (b * b) - (4 * a * c);
 
+    // if the discriminant is negative, the object will never land (safety check)
     if (discriminant < 0) {
         console.warn("Object will never land (escaping orbit?)");
         return null;
@@ -70,5 +78,5 @@ export function predictMissileImpact(
         .applyAxisAngle(rotationAxis, angleToTravel) // Rotate along the path
         .setLength(planetRadius); // Snap to surface
 
-    return finalPos;
+    return { impactPosition: finalPos, timeToImpact: t };
 }
