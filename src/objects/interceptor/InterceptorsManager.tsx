@@ -1,8 +1,11 @@
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useMemo } from "react"
 import { useInterceptorsStore } from "../../store/InterceptorsStore"
 import { useGameManagerStore } from "../../store/gameManagerStore"
+import { useSimulationStore } from "../../store/simulationStore"
 import * as THREE from 'three'
-import { randomPointOnSphere } from "../../utils/coordconvertions"
+import { useFrame } from "@react-three/fiber"
+import LaserBeam from "./LaserBeam"
+import { CITIES, type City } from "../../data/cityData"
 
 // interceptor geometry/material
 const boxGeo = new THREE.BoxGeometry(1, 1, 1)
@@ -10,28 +13,25 @@ const boxMat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(0.1, 4, 0.1)
 })
 
-// helper geometry/material (shared)
-function createHelperGeometry(radius: number) {
-    return new THREE.SphereGeometry(radius, 32, 16)
-}
-const helperMat = new THREE.MeshBasicMaterial({
-    color: new THREE.Color(0.05, 1, 0.1),
-    transparent: true,
-    opacity: 0.1,
-    side: THREE.FrontSide,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-})
+// distribute interceptors across cities
+const getDistributedInterceptors = (count: number, cities: City[], placementRadius: number) => {
+    return Array.from({ length: count }, (_, i) => {
+        // Round-robin distribution among cities
+        const city = cities[i % cities.length]
+        const center = city.cartesianPos
 
-// for demo -random interceptors
-const getRandomInterceptors = (count: number, radius: number, fixedTarget: boolean): THREE.Vector3[] => {
-    if (fixedTarget) return [new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.49053478413761004)]
-    const interceptors = Array.from({ length: count }, () => {
-        const res = randomPointOnSphere(radius)
-        // const target1 = new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.49053478413761004)
-        return new THREE.Vector3(res[0], res[1], res[2])
+        // Very small random spread around the city center (within city radius)
+        const spreadAngle = Math.random() * city.radius * 0.5
+        const randomVec = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
+        const axis = new THREE.Vector3().crossVectors(center, randomVec).normalize()
+
+        const pos = center.clone().applyAxisAngle(axis, spreadAngle).setLength(placementRadius)
+
+        return {
+            id: `interceptor-${i}`,
+            position: pos,
+        }
     })
-    return interceptors
 }
 
 // temp objects
@@ -44,51 +44,48 @@ const pos = new THREE.Vector3()
 export default function InterceptorsManager() {
 
     const { interceptors, setInterceptors } = useInterceptorsStore()
-    const showInterceptorHelper = useGameManagerStore(s => s.showInterceptorHelper)
-    const detectRadius = useGameManagerStore(s => s.detectRadius)
-    const fixedTarget = useGameManagerStore(s => s.fixedTarget)
 
     const interceptorMeshRef = useRef<THREE.InstancedMesh>(null)
-    const helperMeshRef = useRef<THREE.InstancedMesh>(null)
 
-    // recreate helper geometry whenever detectRadius changes
-    const helperGeoRef = useRef<THREE.SphereGeometry>(createHelperGeometry(detectRadius))
-    if (helperGeoRef.current.parameters.radius !== detectRadius) {
-        helperGeoRef.current = createHelperGeometry(detectRadius)
-    }
-
-    // for demo purpopses 
     const interceptorsCount = useGameManagerStore(s => s.interceptorsCount)
     const radius = useGameManagerStore(s => s.radius)
+
+    const simPhase = useSimulationStore(s => s.phase)
+    const showInterceptors = useGameManagerStore(s => s.showInterceptors)
+
+    // Generate interceptors and register in simulation store (only when IDLE)
     useEffect(() => {
-        const rand_interceptors = getRandomInterceptors(interceptorsCount, radius, fixedTarget)
-        setInterceptors(rand_interceptors)
-    }, [interceptorsCount, radius, setInterceptors, fixedTarget])
+        if (simPhase !== 'IDLE') return
+
+        const simStore = useSimulationStore.getState()
+        const randInterceptors = getDistributedInterceptors(interceptorsCount, CITIES, radius)
+        setInterceptors(randInterceptors)
+
+        // Register in simulation store
+        simStore.clearInterceptors()
+        for (const entry of randInterceptors) {
+            simStore.registerInterceptor({
+                id: entry.id,
+                position: entry.position.clone(),
+                status: 'IDLE',
+                currentTargetId: null,
+            })
+        }
+    }, [interceptorsCount, radius, setInterceptors, simPhase])
 
     // update interceptor transforms
     useEffect(() => {
         if (!interceptorMeshRef.current) return
 
         interceptors.forEach((interceptor, i) => {
-
-
-            // position on sphere
-            pos.set(interceptor.x, interceptor.y, interceptor.z)
-
-            // outward normal
+            pos.set(interceptor.position.x, interceptor.position.y, interceptor.position.z)
             normal.copy(pos).normalize()
-
-            // orientation
             tempQuat.setFromUnitVectors(up, normal)
-
-            // small object scale
             const scale = 0.01
-
-            // bottom-pivot so add half it's height * scale
             pos.addScaledVector(normal, scale * 0.5)
 
             tempMatrix.compose(
-                pos.clone(), // no vertical lift needed
+                pos.clone(),
                 tempQuat,
                 new THREE.Vector3(scale, scale, scale)
             )
@@ -97,43 +94,61 @@ export default function InterceptorsManager() {
         })
 
         interceptorMeshRef.current.instanceMatrix.needsUpdate = true
-    }, [interceptors])
+    }, [interceptors, showInterceptors])
 
-    // update helper positions if displayed
-    useEffect(() => {
-        if (!helperMeshRef.current) return
-        if (!showInterceptorHelper) return
+    // Read active interceptor states for laser beams
+    const activeInterceptors = useSimulationStore(s => s.activeInterceptors)
+    const activeMissiles = useSimulationStore(s => s.activeMissiles)
 
-        interceptors.forEach((interceptor, i) => {
-            pos.set(interceptor.x, interceptor.y, interceptor.z)
-            tempMatrix.compose(
-                pos,
-                new THREE.Quaternion(),  // helpers don't rotate
-                new THREE.Vector3(1, 1, 1)
-            )
+    // Build laser beam data
+    const laserBeams = useMemo(() => {
+        const beams: { interceptorPos: THREE.Vector3; targetPos: THREE.Vector3; dwellProgress: number }[] = []
 
-            helperMeshRef.current!.setMatrixAt(i, tempMatrix)
-        })
+        for (const interceptor of activeInterceptors.values()) {
+            if (interceptor.status !== 'ENGAGING' || !interceptor.currentTargetId) continue
 
-        helperMeshRef.current.instanceMatrix.needsUpdate = true
-    }, [interceptors, showInterceptorHelper, detectRadius])
+            const target = activeMissiles.get(interceptor.currentTargetId)
+            if (!target || target.status !== 'DETECTED') continue
+
+            // Get current missile position along its curve
+            const missilePos = target.curve.getPoint(target.progress)
+            const dwellProgress = 1 - (target.dwellTimeRemaining / target.dwellTimeTotal)
+
+            beams.push({
+                interceptorPos: interceptor.position,
+                targetPos: missilePos,
+                dwellProgress,
+            })
+        }
+
+        return beams
+    }, [activeInterceptors, activeMissiles])
+
+    // Force re-render for beam updates
+    useFrame(() => {
+        // This triggers React to re-read the store each frame for beam positions
+    })
 
 
     return (
         <>
-            {/* MAIN INTERCEPTORS */}
-            <instancedMesh
-                ref={interceptorMeshRef}
-                args={[boxGeo, boxMat, interceptors.length]}
-            />
-
-            {/* HELPERS (only rendered if enabled) */}
-            {showInterceptorHelper &&
+            {/* MAIN INTERCEPTORS - Visually hide only the boxes if showInterceptors is false */}
+            {showInterceptors && (
                 <instancedMesh
-                    ref={helperMeshRef}
-                    args={[helperGeoRef.current, helperMat, interceptors.length]}
+                    ref={interceptorMeshRef}
+                    args={[boxGeo, boxMat, interceptors.length]}
                 />
-            }
+            )}
+
+            {/* LASER BEAMS - Always show these when active */}
+            {laserBeams.map((beam, i) => (
+                <LaserBeam
+                    key={`beam-${i}`}
+                    interceptorPos={beam.interceptorPos}
+                    targetPos={beam.targetPos}
+                    dwellProgress={beam.dwellProgress}
+                />
+            ))}
         </>
     )
 }

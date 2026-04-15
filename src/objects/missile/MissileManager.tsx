@@ -1,48 +1,38 @@
 import { useEffect, useRef } from "react"
 import { useGameManagerStore } from "../../store/gameManagerStore"
-import { useMissileStore } from "../../store/missilesStore"
+import { useSimulationStore } from "../../store/simulationStore"
 import Missile from "./Missile"
 import * as THREE from 'three'
 import { useFrame } from "@react-three/fiber"
-import { randomPointOnSphere } from "../../utils/coordconvertions"
-// import { useGLTF } from "@react-three/drei"
 
 const missileGeometry = new THREE.BoxGeometry(1, 1, 2)
 const missileMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color(7, 1, 1) })
 
-// random missiles - for demo
-const getRandomMissiles = (count: number, radius: number, fixedTarget: boolean) => {
-    const missiles = Array.from({ length: count }, () => {
-        const res = randomPointOnSphere(radius)
-        let res2 = new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.49053478413761004)
-        if (!fixedTarget) {
-            const p = randomPointOnSphere(radius)
-            res2 = new THREE.Vector3(p[0], p[1], p[2])
-        }
-        return {
-            source: new THREE.Vector3(res[0], res[1], res[2]),
-            target: res2,
-        }
-    });
-    return missiles
-}
-
-
+/**
+ * MissileManager — renders visual representations of all active missiles
+ * in the simulation store.
+ * 
+ * No longer generates/manages missiles directly — the SimulationController
+ * handles spawning. This component purely reads from the simulation store
+ * and renders the visuals.
+ */
 const MissileManager = () => {
     const radius = useGameManagerStore(s => s.radius)
-    const fixedTarget = useGameManagerStore(s => s.fixedTarget)
+    const { simulationSpeed, gravity, missileSpeed } = useGameManagerStore()
+    const activeMissiles = useSimulationStore(s => s.activeMissiles)
+    const phase = useSimulationStore(s => s.phase)
+    const meshRef = useRef<THREE.InstancedMesh>(null)
 
-    const { missiles, setMissiles } = useMissileStore()
-    const meshRef = useRef<THREE.InstancedMesh>(null) // positions will be set inside ArcLine.tsx
-    // const rocket = useGLTF('/models/Rocket.glb')
-
-    // demo
-    const missilesCount = useGameManagerStore(state => state.missilesCount)
+    // Reset instanced mesh when simulation restarts
     useEffect(() => {
-        const randomMissiles = getRandomMissiles(missilesCount, radius, fixedTarget)
-        setMissiles(randomMissiles)
-    }, [missilesCount, radius, setMissiles, fixedTarget])
-
+        if (meshRef.current && phase === 'IDLE') {
+            for (let i = 0; i < meshRef.current.count; i++) {
+                const m = new THREE.Matrix4().makeScale(0, 0, 0)
+                meshRef.current.setMatrixAt(i, m)
+            }
+            meshRef.current.instanceMatrix.needsUpdate = true
+        }
+    }, [phase])
 
     useFrame(() => {
         if (meshRef.current) {
@@ -50,17 +40,44 @@ const MissileManager = () => {
         }
     })
 
+    // Convert map to array for rendering
+    const missileEntries = [...activeMissiles.entries()]
+    const maxInstances = 250 // Use a fixed large enough buffer to avoid constant reallocations
 
     return (
         <>
+            {phase !== 'IDLE' && missileEntries.map(([id, missile], index) => (
+                <Missile
+                    key={id}
+                    missileId={id}
+                    source={missile.sourcePos}
+                    target={missile.targetPos}
+                    radius={radius}
+                    instanceId={index}
+                    instancedMeshRef={meshRef}
+                    missileType={missile.missileType}
+                    speed={missileSpeed}
+                    gravity={gravity}
+                    simulationSpeed={simulationSpeed}
+                />
+            ))}
 
-            {missiles.map((missile, index) => <Missile id={index} instancedMeshRef={meshRef} key={`missile-${index}-${missilesCount}`} source={missile.source} target={missile.target} radius={radius} />)}
-
-            {/* missiles instanced mesh*/}
-            <instancedMesh ref={meshRef} args={[missileGeometry, missileMaterial, missiles.length]} />
-
+            {/* Missiles instanced mesh */}
+            <instancedMesh
+                ref={meshRef}
+                args={[missileGeometry, missileMaterial, maxInstances]}
+                onUpdate={(self) => {
+                    // Initialize all matrices to scale 0 on first load
+                    if (self.userData.initialized) return
+                    const matrix = new THREE.Matrix4().makeScale(0, 0, 0)
+                    for (let i = 0; i < maxInstances; i++) {
+                        self.setMatrixAt(i, matrix)
+                    }
+                    self.instanceMatrix.needsUpdate = true
+                    self.userData.initialized = true
+                }}
+            />
         </>
     )
-
 }
 export default MissileManager

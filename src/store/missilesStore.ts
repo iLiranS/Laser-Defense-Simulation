@@ -1,27 +1,26 @@
 import { create } from 'zustand'
 import * as THREE from 'three'
+import { MissileType } from '../types/global'
 
-
-type missile = {
+export interface MissileEntry {
     source: THREE.Vector3
     target: THREE.Vector3
+    missileType: MissileType
+    spawnDelay: number           // jitter within wave
 }
 
-// It's good practice to capitalize Type names
 type MissileStore = {
-    missiles: missile[]
-    addMissile: (source: THREE.Vector3, target: THREE.Vector3) => void
-    setMissiles: (missiles: missile[]) => void
+    missiles: MissileEntry[]
+    addMissile: (entry: MissileEntry) => void
+    setMissiles: (missiles: MissileEntry[]) => void
 }
 
 export const useMissileStore = create<MissileStore>()((set) => ({
     missiles: [],
 
-
-    addMissile: (source, target) => set((state) => ({
-        missiles: [...state.missiles, { source, target }]
+    addMissile: (entry) => set((state) => ({
+        missiles: [...state.missiles, entry]
     })),
-
 
     setMissiles: (missiles) => set({ missiles }),
 }))

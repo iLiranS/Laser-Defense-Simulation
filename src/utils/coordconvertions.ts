@@ -5,8 +5,12 @@ import type { cartesianCoords, sphericalCoords } from "../types/global"
 
 export const sphericalToCartesian = (coords: sphericalCoords): cartesianCoords => {
     const { radius = 1, altitude = 0, lat, long } = coords
-    const xPos = (radius + altitude) * Math.cos(lat) * Math.cos(long)
-    const zPos = (radius + altitude) * Math.cos(lat) * Math.sin(long)
+    // Synchronizing with EarthLines.tsx logic:
+    // Longitude is negated to match how the NASA texture and GeoJSON borders are mapped.
+    const adjustedLong = -long
+    
+    const xPos = (radius + altitude) * Math.cos(lat) * Math.cos(adjustedLong)
+    const zPos = (radius + altitude) * Math.cos(lat) * Math.sin(adjustedLong)
     const yPos = (radius + altitude) * Math.sin(lat)
     return new THREE.Vector3(xPos, yPos, zPos)
 }
@@ -28,7 +32,8 @@ export function cartesianToSpherical(pos: cartesianCoords, radius = 1): spherica
 
     // 4. Compute latitude (φ) and longitude (λ)
     const lat = Math.asin(ny);      // radians
-    const long = Math.atan2(nz, nx); // radians
+    // Inverse of sphericalToCartesian where adjustedLong was -long
+    const long = -Math.atan2(nz, nx); // radians
 
     // 5. Return the correct components
     return {

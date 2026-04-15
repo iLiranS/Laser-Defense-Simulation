@@ -11,6 +11,8 @@ import InterceptorsManager from './objects/interceptor/InterceptorsManager'
 import { useGameManagerStore } from './store/gameManagerStore'
 import MissileManager from './objects/missile/MissileManager'
 import Debug from './debug/Debug'
+import SimulationController from './simulation/SimulationController'
+import CityMarkers from './objects/earth/CityMarkers'
 
 
 // const target1 = new THREE.Vector3(0.704355292418356, 0.5227659587170155, -0.49053478413761004) // israel radius 1
@@ -20,9 +22,6 @@ import Debug from './debug/Debug'
 
 const Experience = () => {
     const radius = useGameManagerStore(s => s.radius)
-    // demo speed
-    const setSimulationSpeed = useGameManagerStore(state => state.setSimulationSpeed)
-    setSimulationSpeed(1)
 
 
     return (
@@ -45,8 +44,10 @@ const Experience = () => {
             <Suspense fallback={<EarthPlaceholder radius={radius} />}>
                 <Atmosphere />
                 <Earth />
+                <CityMarkers />
                 <MissileManager />
                 <InterceptorsManager />
+                <SimulationController />
             </Suspense>
 
 

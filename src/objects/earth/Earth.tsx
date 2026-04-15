@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { useRef } from "react"
 import { useGameManagerStore } from "../../store/gameManagerStore"
 import EarthLines from "./EarthLines"
+import { cartesianToSpherical } from "../../utils/coordconvertions"
 
 
 
@@ -49,10 +50,8 @@ const Earth: React.FC<earthProps> = ({ addObject }) => {
             <mesh ref={earthRef} onClick={(e) => {
                 e.stopPropagation();
                 if (!addObject) return
-                const clickPosition = e.point;
-                const lat = Math.asin(clickPosition.y / radius);
-                const long = Math.atan2(clickPosition.z, clickPosition.x);
-                addObject({ lat, long })
+                const sphereCoords = cartesianToSpherical(e.point, radius);
+                addObject(sphereCoords)
 
             }} castShadow>
                 <sphereGeometry args={[radius, 64, 64]} />

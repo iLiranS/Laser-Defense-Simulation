@@ -8,48 +8,39 @@ type gameManagerStore = {
     radius: number
     simulationSpeed: number
     showTrajectoryPrediction: boolean
-    showInterceptorHelper: boolean
-    detectRadius: number
+    showRadarRadius: boolean
     interceptorsCount: number // for demo
-    missilesCount: number // for demo
     gravity: number
     missileSpeed: number
-    fixedTarget: boolean
+    showInterceptors: boolean
 
     setRadius: (newRadius: number) => void
     setSimulationSpeed: (newSpeed: number) => void
     setShowTrajectoryPrediction: (val: boolean) => void
-    setShowInterceptorHelper: (val: boolean) => void
-    setDetectRadius: (val: number) => void
-    setMissilesCount: (val: number) => void
+    setShowRadarRadius: (val: boolean) => void
     setInterceptorsCount: (val: number) => void
     setGravity: (val: number) => void
     setMissilesSpeed: (val: number) => void
-    setFixedTarget: (val: boolean) => void
+    setShowInterceptors: (val: boolean) => void
 }
 
 export const useGameManagerStore = create<gameManagerStore>()((set) => ({
     radius: 1,
-    simulationSpeed: 1,
-    showTrajectoryPrediction: true,
-    showInterceptorHelper: true,
-    detectRadius: 0.15,
-    missilesCount: 25,
+    simulationSpeed: 5,
+    showTrajectoryPrediction: false,
+    showRadarRadius: true,
     interceptorsCount: 5,
     gravity: 2,
     missileSpeed: 3,
-    fixedTarget: false,
+    showInterceptors: false,
 
     setRadius: (radius) => set({ radius }),
     setSimulationSpeed: (simulationSpeed) => set({ simulationSpeed }),
     setShowTrajectoryPrediction: (showTrajectoryPrediction) => set({ showTrajectoryPrediction }),
-    setShowInterceptorHelper: (showInterceptorHelper) => set({ showInterceptorHelper }),
-    setDetectRadius: (detectRadius) => set({ detectRadius }),
+    setShowRadarRadius: (showRadarRadius) => set({ showRadarRadius }),
     setInterceptorsCount: (interceptorsCount) => set({ interceptorsCount }),
-    setMissilesCount: (missilesCount) => set({ missilesCount }),
     setGravity: (gravity) => set({ gravity }),
     setMissilesSpeed: (missileSpeed) => set({ missileSpeed }),
-    setFixedTarget: (fixedTarget) => set({ fixedTarget }),
-
+    setShowInterceptors: (showInterceptors) => set({ showInterceptors }),
 
 }))

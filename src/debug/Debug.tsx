@@ -1,19 +1,17 @@
 import { button, useControls } from "leva"
 import { useGameManagerStore } from "../store/gameManagerStore"
+import { useSimulationStore } from "../store/simulationStore"
 
 const Debug = () => {
 
     // Access setters directly
     const {
         setShowTrajectoryPrediction,
-        setShowInterceptorHelper,
+        setShowRadarRadius,
         setSimulationSpeed,
-        setDetectRadius,
         setInterceptorsCount,
-        setMissilesCount,
         setGravity,
         setMissilesSpeed,
-        setFixedTarget,
         radius,
         // setRadius // for now not needed
     } = useGameManagerStore()
@@ -26,14 +24,10 @@ const Debug = () => {
             // 2. Update store immediately when changed
             onChange: (v: boolean) => setShowTrajectoryPrediction(v)
         },
-        interceptorsHelper: {
-            value: useGameManagerStore.getState().showInterceptorHelper,
-            label: 'Show Radius',
-            onChange: (v: boolean) => setShowInterceptorHelper(v)
-        },
-        fixedTarget: {
-            value: useGameManagerStore.getState().fixedTarget,
-            onChange: (v: boolean) => setFixedTarget(v)
+        showRadar: {
+            value: useGameManagerStore.getState().showRadarRadius,
+            label: 'Show Radar',
+            onChange: (v: boolean) => setShowRadarRadius(v)
         },
         speed: {
             value: useGameManagerStore.getState().simulationSpeed,
@@ -42,26 +36,12 @@ const Debug = () => {
             step: 0.1,
             onEditEnd: (v: number) => setSimulationSpeed(v)
         },
-        detectRadius: {
-            value: 0.15,
-            max: radius,
-            min: 0.1,
-            step: 0.01,
-            onEditEnd: (v: number) => setDetectRadius(v)
-        },
         interceptorsCount: {
             value: useGameManagerStore.getState().interceptorsCount,
             min: 0,
             max: 30,
             step: 1,
             onEditEnd: (v: number) => setInterceptorsCount(v)
-        },
-        missilesCount: {
-            value: useGameManagerStore.getState().missilesCount,
-            min: 0,
-            max: 250,
-            step: 1,
-            onEditEnd: (v: number) => setMissilesCount(v)
         },
         gravity: {
             value: useGameManagerStore.getState().gravity,
@@ -78,17 +58,39 @@ const Debug = () => {
             step: 0.1,
             onEditEnd: (v: number) => setMissilesSpeed(v)
         },
+        showInterceptors: {
+            value: useGameManagerStore.getState().showInterceptors,
+            label: 'Show Interceptors',
+            onChange: (v: boolean) => useGameManagerStore.getState().setShowInterceptors(v)
+        }
+    }, { collapsed: true })
 
-        RANDOMIZE: button(() => {
-            const missilesCount = Math.floor(Math.random() * 251)
-            const interceptorsCount = Math.floor(Math.random() * 30)
-            setInterceptorsCount(interceptorsCount)
-            setMissilesCount(missilesCount)
-        })
+    // Simulation controls
+    const simStore = useSimulationStore.getState()
+
+    useControls('Simulation', {
+        radarRadius: {
+            value: simStore.radarRadius,
+            min: 0.03,
+            max: 1.0,
+            step: 0.005,
+            onChange: (v: number) => useSimulationStore.getState().setRadarRadius(v),
+        },
+        'Preset: Light Attack': button(() => {
+            useSimulationStore.getState().setWaveConfig({ missileCount: 25, interval: 10 })
+            useSimulationStore.getState().setTotalWaves(3)
+        }),
+        'Preset: Saturated': button(() => {
+            useSimulationStore.getState().setWaveConfig({ missileCount: 35, interval: 7 })
+            useSimulationStore.getState().setTotalWaves(5)
+        }),
+        'Preset: Heavy Barrage': button(() => {
+            useSimulationStore.getState().setWaveConfig({ missileCount: 50, interval: 5 })
+            useSimulationStore.getState().setTotalWaves(7)
+        }),
     }, { collapsed: false })
 
-    // No useEffect needed!
-    // This component now acts purely as a bridge and doesn't need to re-render itself.
+    // This component acts purely as a bridge and doesn't need to render anything.
     return null
 }
 
