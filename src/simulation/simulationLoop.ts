@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { T_SAFETY, DWELL_TIME, MissileType, ZoneType } from '../types/global'
-import type { ActiveMissile, WaveConfig, MissileSnapshot, DefenseAlgorithm } from '../types/simulationTypes'
+import type { ActiveMissile, WaveConfig, MissileSnapshot } from '../types/simulationTypes'
 import { classifyImpactZone, CITIES, type City } from '../data/cityData'
 import { predictMissileImpact } from '../objects/missile/utils/predictMissileImpact'
 import { PhysicsProjectileCurve } from '../objects/missile/utils/physicsProjectileCurve'
@@ -70,7 +70,7 @@ export function createActiveMissile(
  */
 export function simulationTick(
     delta: number,
-    speed: number,
+    _speed: number,
     gravity: number,
 ): void {
     const store = useSimulationStore.getState()
@@ -262,7 +262,7 @@ function pickWeightedCity(ratios: { city: number, rural: number, open: number })
  */
 export function generateWaveSnapshots(
     waveConfig: WaveConfig,
-    waveIndex: number,
+    _waveIndex: number,
     radius: number,
     _radarCenter: THREE.Vector3
 ): MissileSnapshot[] {
