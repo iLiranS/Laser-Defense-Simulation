@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { T_SAFETY } from '../types/global'
+import { T_SAFETY, MAX_INTERCEPTORS_PER_MISSILE } from '../types/global'
 import type { ActiveMissile, ActiveInterceptor, DefenseAlgorithm, WaveConfig, MissileSnapshot, SimulationResult } from '../types/simulationTypes'
 import { classifyImpactZone } from '../data/cityData'
 import { predictMissileImpact } from '../objects/missile/utils/predictMissileImpact'
@@ -158,24 +158,26 @@ function processMissiles(
         if (missile.status === 'DETECTED') {
             missile.TTI = Math.max(0, missile.TTI - delta)
 
-            let isEngaged = false
+            let engagingCount = 0
             for (const interceptor of interceptors.values()) {
                 if (interceptor.currentTargetId === missile.id && interceptor.status === 'ENGAGING') {
-                    isEngaged = true
-                    break
+                    engagingCount++
                 }
             }
 
-            if (isEngaged) {
-                missile.dwellTimeRemaining = Math.max(0, missile.dwellTimeRemaining - delta)
+            if (engagingCount > 0) {
+                missile.dwellTimeRemaining = Math.max(0, missile.dwellTimeRemaining - (delta * engagingCount))
                 if (missile.dwellTimeRemaining <= 0) {
                     missile.status = 'INTERCEPTED'
                     continue
                 }
             }
 
+            const maxPossibleDrainRate = MAX_INTERCEPTORS_PER_MISSILE
+            const theoreticalMinTimeNeeded = missile.dwellTimeRemaining / maxPossibleDrainRate
+
             // Lost cause — both algorithms
-            if (!isEngaged && missile.TTI < missile.dwellTimeRemaining + T_SAFETY) {
+            if (engagingCount === 0 && missile.TTI < theoreticalMinTimeNeeded + T_SAFETY) {
                 missile.status = 'LOST_CAUSE'
                 continue
             }

@@ -1,4 +1,4 @@
-import { EPSILON } from '../types/global'
+import { EPSILON, T_SAFETY } from '../types/global'
 import type { ActiveMissile } from '../types/simulationTypes'
 
 /**
@@ -8,18 +8,21 @@ import type { ActiveMissile } from '../types/simulationTypes'
  * 
  * Lower TTI → higher score. Ignores damage, zone weight, and dwell time.
  * This serves as the baseline comparison against the smart algorithm.
- * 
- * No lost-cause filtering — naive algorithm doesn't check if interception
- * is physically possible, it just targets whatever is closest to impact.
- * 
- * Missiles with zero impact damage (SEA zone) are skipped — no defense
- * system would waste resources intercepting a missile heading to open sea.
+ * - Lost causes (TTI < D_rem + T_safety) still get score 0
+ * - Missiles with zero impact damage (SEA zone) are skipped
  */
 export function computeNaiveScore(missile: ActiveMissile): number {
-    // Skip missiles that pose no threat (landing in sea / empty area)
-    if (missile.impactDamage <= 0) return 0
+    const { impactDamage, TTI, dwellTimeRemaining } = missile
 
-    return 1 / (missile.TTI + EPSILON)
+    // Skip missiles that pose no threat (landing in sea / empty area)
+    if (impactDamage <= 0) return 0
+
+    // Ensure lost causes still get 0, even with tiny positive TTI
+    if (TTI < dwellTimeRemaining + T_SAFETY) {
+        return 0
+    }
+
+    return 1 / (TTI + EPSILON)
 }
 
 /**

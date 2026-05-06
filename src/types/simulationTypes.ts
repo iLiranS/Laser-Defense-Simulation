@@ -5,7 +5,7 @@ import type { PhysicsProjectileCurve } from '../objects/missile/utils/physicsPro
 
 
 // ── Defense Algorithm Selection ──
-export type DefenseAlgorithm = 'naive' | 'smart'
+export type DefenseAlgorithm = 'naive' | 'smart' | 'smartGamma'
 
 // ── Missile Runtime State ──
 export type MissileStatus = 'FLYING' | 'DETECTED' | 'INTERCEPTED' | 'IMPACTED' | 'LOST_CAUSE'
@@ -107,5 +107,5 @@ export type SimulationPhase = 'IDLE' | 'RUNNING' | 'FINISHED' | 'COMPARING'
 
 // ── Multi-Run Comparison Results ──
 export interface MultiRunComparisonResults {
-    runs: { naive: SimulationResult; smart: SimulationResult }[]
+    runs: { naive: SimulationResult; smart: SimulationResult; smartGamma: SimulationResult }[]
 }

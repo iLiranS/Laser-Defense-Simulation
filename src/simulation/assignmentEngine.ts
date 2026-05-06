@@ -1,29 +1,21 @@
-import { SWITCHING_DELTA } from '../types/global'
+import { SWITCHING_DELTA, T_SAFETY, MAX_INTERCEPTORS_PER_MISSILE } from '../types/global'
 import type { ActiveMissile, ActiveInterceptor, DefenseAlgorithm } from '../types/simulationTypes'
 import { computeSmartScore } from './scoringEngine'
+import { computeSmartGammaScore } from './smartGammaEngine'
 import { computeNaiveScore } from './naiveEngine'
 
 type ScoringFn = (missile: ActiveMissile) => number
 
 function getScoringFunction(algorithm: DefenseAlgorithm): ScoringFn {
-    return algorithm === 'smart' ? computeSmartScore : computeNaiveScore
+    if (algorithm === 'smart') return computeSmartScore
+    if (algorithm === 'smartGamma') return computeSmartGammaScore
+    return computeNaiveScore
 }
 
 /**
  * Greedy interceptor-to-target assignment engine.
  * 
  * Runs every tick to manage the K-interceptors → N-targets mapping.
- * 
- * Steps (from the project spec):
- * 1. Update engaging interceptors (check if targets are destroyed or lost)
- * 2. Score & sort all detected missiles
- * 3. Filter out already-targeted missiles → free target list
- * 4. Assign idle interceptors to top free targets
- * 5. Target switching (smart only): if S_new > S_current + δ → switch
- * 
- * Complexity: O(N log N) dominated by the sort step.
- * 
- * Mutates the missiles and interceptors maps in place for performance.
  */
 export function runAssignment(
     missiles: Map<string, ActiveMissile>,
@@ -32,114 +24,110 @@ export function runAssignment(
 ): void {
     const scoreFn = getScoringFunction(algorithm)
 
-    // ── Step 1: Update engaging interceptors ──
-    for (const interceptor of interceptors.values()) {
-        if (interceptor.status !== 'ENGAGING' || !interceptor.currentTargetId) continue
-
-        const target = missiles.get(interceptor.currentTargetId)
-
-        // Target destroyed (D_rem <= 0) — handled by tick, interceptor released
-        if (!target || target.status === 'INTERCEPTED' || target.status === 'IMPACTED') {
-            interceptor.status = 'IDLE'
-            interceptor.currentTargetId = null
-            continue
-        }
-
-        // Target became lost cause — release interceptor
-        if (target.status === 'LOST_CAUSE') {
-            interceptor.status = 'IDLE'
-            interceptor.currentTargetId = null
-            continue
-        }
-    }
-
-    // ── Step 2: Score & sort all DETECTED missiles ──
-    const detectedMissiles: ActiveMissile[] = []
-    for (const missile of missiles.values()) {
-        if (missile.status === 'DETECTED') {
-            missile.score = scoreFn(missile)
-            detectedMissiles.push(missile)
-        }
-    }
-
-    // Sort descending by score (highest priority first)
-    detectedMissiles.sort((a, b) => b.score - a.score)
-
-    // ── Step 3: Build set of already-targeted missile IDs ──
-    const targetedIds = new Set<string>()
+    // 1. Tally current engagements
+    const engagementCounts = new Map<string, number>()
+    for (const missile of missiles.values()) engagementCounts.set(missile.id, 0)
+    
     for (const interceptor of interceptors.values()) {
         if (interceptor.status === 'ENGAGING' && interceptor.currentTargetId) {
-            targetedIds.add(interceptor.currentTargetId)
-        }
-    }
-
-    // Free targets = detected missiles not currently being engaged
-    const freeTargets = detectedMissiles.filter(m => !targetedIds.has(m.id) && m.score > 0)
-
-    // ── Step 4: Assign idle interceptors to top free targets ──
-    const idleInterceptors: ActiveInterceptor[] = []
-    for (const interceptor of interceptors.values()) {
-        if (interceptor.status === 'IDLE') {
-            idleInterceptors.push(interceptor)
-        }
-    }
-
-    let freeTargetIdx = 0
-    for (const interceptor of idleInterceptors) {
-        if (freeTargetIdx >= freeTargets.length) break
-
-        const target = freeTargets[freeTargetIdx]
-        interceptor.status = 'ENGAGING'
-        interceptor.currentTargetId = target.id
-        targetedIds.add(target.id)
-        freeTargetIdx++
-    }
-
-    // Remove assigned targets from freeTargets (shift the index)
-    const remainingFreeTargets = freeTargets.slice(freeTargetIdx)
-
-    // ── Step 5: Target switching (smart algorithm only) ──
-    // Only runs if there are free targets remaining (more missiles than interceptors)
-    if (algorithm === 'smart' && remainingFreeTargets.length > 0) {
-        // Collect engaging interceptors sorted by their current target score (lowest first)
-        const engagingInterceptors: ActiveInterceptor[] = []
-        for (const interceptor of interceptors.values()) {
-            if (interceptor.status === 'ENGAGING' && interceptor.currentTargetId) {
-                engagingInterceptors.push(interceptor)
+            // Target might be destroyed/lost, handle cleanup
+            const target = missiles.get(interceptor.currentTargetId)
+            if (!target || target.status === 'INTERCEPTED' || target.status === 'IMPACTED' || target.status === 'LOST_CAUSE') {
+                interceptor.status = 'IDLE'
+                interceptor.currentTargetId = null
+            } else {
+                const count = engagementCounts.get(target.id) || 0
+                engagementCounts.set(target.id, count + 1)
             }
         }
+    }
 
-        // Sort by current target score ascending — try to switch lowest-value engagements first
-        engagingInterceptors.sort((a, b) => {
-            const scoreA = missiles.get(a.currentTargetId!)?.score ?? 0
-            const scoreB = missiles.get(b.currentTargetId!)?.score ?? 0
-            return scoreA - scoreB
-        })
+    // 2. Score and calculate Marginal Value for all valid targets
+    interface TargetSlot {
+        missile: ActiveMissile
+        marginalScore: number
+        isHelper: boolean
+    }
+    const targetSlots: TargetSlot[] = []
 
-        let freeIdx = 0
-        for (const interceptor of engagingInterceptors) {
-            if (freeIdx >= remainingFreeTargets.length) break
+    for (const missile of missiles.values()) {
+        if (missile.status !== 'DETECTED') continue
+        
+        missile.score = scoreFn(missile)
+        const currentEngagements = engagementCounts.get(missile.id) || 0
 
-            const currentTarget = missiles.get(interceptor.currentTargetId!)
+        if (currentEngagements < MAX_INTERCEPTORS_PER_MISSILE && missile.score > 0) {
+            let marginalScore = missile.score
+            let isHelper = false
+
+            // If it already has 1 interceptor, calculate the helper value
+            if (currentEngagements === 1) {
+                isHelper = true
+                const willFirstLaserFail = missile.TTI < (missile.dwellTimeRemaining + T_SAFETY)
+                marginalScore = willFirstLaserFail ? (missile.score * 1.5) : (missile.score * 0.2)
+            }
+
+            targetSlots.push({ missile, marginalScore, isHelper })
+        }
+    }
+
+    // Sort slots by highest marginal value
+    targetSlots.sort((a, b) => b.marginalScore - a.marginalScore)
+
+    // 3. Assign Idle Interceptors
+    for (const interceptor of interceptors.values()) {
+        if (interceptor.status !== 'IDLE') continue
+        if (targetSlots.length === 0) break
+
+        const bestSlot = targetSlots.shift()! // Take the best available slot
+        interceptor.status = 'ENGAGING'
+        interceptor.currentTargetId = bestSlot.missile.id
+        
+        // Update counts so we don't assign 3 interceptors in the same tick
+        engagementCounts.set(bestSlot.missile.id, (engagementCounts.get(bestSlot.missile.id) || 0) + 1)
+    }
+
+    // 4. Target Switching (Smart Only)
+    if (algorithm !== 'naive' && targetSlots.length > 0) {
+        // Evaluate current marginal score for each engaging interceptor
+        const engagingList: { interceptor: ActiveInterceptor, marginalScore: number, currentTarget: ActiveMissile }[] = []
+
+        for (const interceptor of interceptors.values()) {
+            if (interceptor.status !== 'ENGAGING' || !interceptor.currentTargetId) continue
+
+            const currentTarget = missiles.get(interceptor.currentTargetId)
             if (!currentTarget) continue
 
-            // Don't switch away from targets that are almost destroyed (>60% dwell time done)
             const dwellProgress = 1 - (currentTarget.dwellTimeRemaining / currentTarget.dwellTimeTotal)
             if (dwellProgress > 0.6) continue
 
-            const currentScore = currentTarget.score
-            const candidate = remainingFreeTargets[freeIdx]
+            const isCurrentlyHelper = (engagementCounts.get(currentTarget.id) || 1) > 1
+            const willCurrentFailWithoutMe = currentTarget.TTI < (currentTarget.dwellTimeRemaining + T_SAFETY)
+            
+            let currentMarginalScore = currentTarget.score
+            if (isCurrentlyHelper) {
+                currentMarginalScore = willCurrentFailWithoutMe ? (currentTarget.score * 1.5) : (currentTarget.score * 0.2)
+            }
 
-            // Switch only if the new target's score exceeds current + penalty
-            if (candidate.score > currentScore + SWITCHING_DELTA) {
-                // Release old target (returns to free pool, D_rem stays partially reduced)
-                targetedIds.delete(currentTarget.id)
+            engagingList.push({ interceptor, marginalScore: currentMarginalScore, currentTarget })
+        }
 
-                // Assign new target
-                interceptor.currentTargetId = candidate.id
-                targetedIds.add(candidate.id)
-                freeIdx++
+        // Sort so we try to switch the least valuable engagements first
+        engagingList.sort((a, b) => a.marginalScore - b.marginalScore)
+
+        for (const { interceptor, marginalScore, currentTarget } of engagingList) {
+            if (targetSlots.length === 0) break
+            const candidateSlot = targetSlots[0]
+
+            if (candidateSlot.marginalScore > marginalScore + SWITCHING_DELTA) {
+                // Perform the switch
+                engagementCounts.set(currentTarget.id, engagementCounts.get(currentTarget.id)! - 1)
+                interceptor.currentTargetId = candidateSlot.missile.id
+                engagementCounts.set(candidateSlot.missile.id, (engagementCounts.get(candidateSlot.missile.id) || 0) + 1)
+                
+                targetSlots.shift() // Remove the taken slot
             }
         }
     }
 }
+

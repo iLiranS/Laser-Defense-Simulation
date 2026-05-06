@@ -38,7 +38,7 @@ export function computeSmartScore(missile: ActiveMissile): number {
 
     // Gentle urgency: increases as slack shrinks, but doesn't dominate
     // The +0.5 floor prevents division by near-zero and limits max boost to ~3×
-    const urgencyMultiplier = 1 + (1 / (slack + 0.5))
+    const urgencyMultiplier = 1 + (1 / (slack + 0.3))
 
     return damageDensity * urgencyMultiplier
 }

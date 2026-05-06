@@ -79,8 +79,8 @@ export const useSimulationStore = create<SimulationStore>()((set, _) => ({
     radarRadius: 0.15,
 
     waveConfig: {
-        missileCount: 35,
-        interval: 7,
+        missileCount: 150,
+        interval: 5,
         jitterRange: 0.4,
         ratios: {
             light: 0.6,
