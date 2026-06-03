@@ -2,7 +2,7 @@ import type { SimulationResult } from '../types/simulationTypes'
 import { MissileType, ZoneType } from '../types/global'
 
 type ComparisonResultsProps = {
-    runs: { naive: SimulationResult; smart: SimulationResult; smartGamma: SimulationResult }[]
+    runs: { naive: SimulationResult; smart: SimulationResult }[]
     onClose: () => void
 }
 
@@ -33,18 +33,13 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
     const n = runs.length
     const naiveRuns = runs.map(r => r.naive)
     const smartRuns = runs.map(r => r.smart)
-    const gammaRuns = runs.map(r => r.smartGamma)
 
     // Per-run damage reduction percentages vs Naive
     const smartReductions = runs.map(({ naive, smart }) =>
         naive.totalDamage > 0 ? ((naive.totalDamage - smart.totalDamage) / naive.totalDamage * 100) : 0
     )
-    const gammaReductions = runs.map(({ naive, smartGamma }) =>
-        naive.totalDamage > 0 ? ((naive.totalDamage - smartGamma.totalDamage) / naive.totalDamage * 100) : 0
-    )
 
     const avgSmartRed = smartReductions.reduce((s, v) => s + v, 0) / n
-    const avgGammaRed = gammaReductions.reduce((s, v) => s + v, 0) / n
 
     // Averaged metrics
     const getMetrics = (algRuns: SimulationResult[]) => ({
@@ -58,39 +53,34 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
 
     const naiveM = getMetrics(naiveRuns)
     const smartM = getMetrics(smartRuns)
-    const gammaM = getMetrics(gammaRuns)
 
     // Use first run for counts (consistent across runs due to same config)
     const refNaive = naiveRuns[0]
 
-    const rows: { label: string; naive: string; smart: string; gamma: string; best: 'naive' | 'smart' | 'gamma' }[] = [
+    const rows: { label: string; naive: string; smart: string; best: 'naive' | 'smart' }[] = [
         {
             label: 'Interception Rate',
             naive: `${naiveM.rate.toFixed(1)}%`,
             smart: `${smartM.rate.toFixed(1)}%`,
-            gamma: `${gammaM.rate.toFixed(1)}%`,
-            best: smartM.rate >= gammaM.rate && smartM.rate >= naiveM.rate ? 'smart' : (gammaM.rate >= naiveM.rate ? 'gamma' : 'naive'),
+            best: smartM.rate >= naiveM.rate ? 'smart' : 'naive',
         },
         {
             label: 'Total Damage',
             naive: `${naiveM.damage.toFixed(1)}`,
             smart: `${smartM.damage.toFixed(1)}`,
-            gamma: `${gammaM.damage.toFixed(1)}`,
-            best: smartM.damage <= gammaM.damage && smartM.damage <= naiveM.damage ? 'smart' : (gammaM.damage <= naiveM.damage ? 'gamma' : 'naive'),
+            best: smartM.damage <= naiveM.damage ? 'smart' : 'naive',
         },
         {
             label: 'Intercepted',
             naive: `${naiveM.intercepted.toFixed(1)}`,
             smart: `${smartM.intercepted.toFixed(1)}`,
-            gamma: `${gammaM.intercepted.toFixed(1)}`,
-            best: smartM.intercepted >= gammaM.intercepted && smartM.intercepted >= naiveM.intercepted ? 'smart' : (gammaM.intercepted >= naiveM.intercepted ? 'gamma' : 'naive'),
+            best: smartM.intercepted >= naiveM.intercepted ? 'smart' : 'naive',
         },
         {
             label: 'Impacted',
             naive: `${naiveM.impacted.toFixed(1)}`,
             smart: `${smartM.impacted.toFixed(1)}`,
-            gamma: `${gammaM.impacted.toFixed(1)}`,
-            best: smartM.impacted <= gammaM.impacted && smartM.impacted <= naiveM.impacted ? 'smart' : (gammaM.impacted <= naiveM.impacted ? 'gamma' : 'naive'),
+            best: smartM.impacted <= naiveM.impacted ? 'smart' : 'naive',
         },
     ]
 
@@ -98,7 +88,6 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
     for (const type of [MissileType.LIGHT, MissileType.MEDIUM, MissileType.HEAVY]) {
         const nAvg = avg(naiveRuns, r => r.missileBreakdown.find(b => b.type === type)?.intercepted ?? 0)
         const sAvg = avg(smartRuns, r => r.missileBreakdown.find(b => b.type === type)?.intercepted ?? 0)
-        const gAvg = avg(gammaRuns, r => r.missileBreakdown.find(b => b.type === type)?.intercepted ?? 0)
         const count = avg(naiveRuns, r => r.missileBreakdown.find(b => b.type === type)?.count ?? 0)
 
         if (count > 0) {
@@ -106,8 +95,7 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
                 label: `${TYPE_LABELS[type]} (Int)`,
                 naive: `${nAvg.toFixed(1)}`,
                 smart: `${sAvg.toFixed(1)}`,
-                gamma: `${gAvg.toFixed(1)}`,
-                best: sAvg >= gAvg && sAvg >= nAvg ? 'smart' : (gAvg >= nAvg ? 'gamma' : 'naive'),
+                best: sAvg >= nAvg ? 'smart' : 'naive',
             })
         }
     }
@@ -125,7 +113,7 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#a0c4ff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    ⚔ 3-Way Comparison ({n} runs)
+                    ⚔ Algorithm Comparison ({n} runs)
                 </span>
                 <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#888', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px' }}>✕</button>
             </div>
@@ -140,22 +128,9 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
                     textAlign: 'center',
                     border: '1px solid rgba(80,200,120,0.15)',
                 }}>
-                    <div style={{ fontSize: '9px', color: '#888', textTransform: 'uppercase', marginBottom: '2px' }}>Smart Red.</div>
+                    <div style={{ fontSize: '9px', color: '#888', textTransform: 'uppercase', marginBottom: '2px' }}>Smart Red. vs Naive</div>
                     <div style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'monospace', color: avgSmartRed > 0 ? '#4ade80' : '#f87171' }}>
                         {avgSmartRed > 0 ? '+' : ''}{avgSmartRed.toFixed(1)}%
-                    </div>
-                </div>
-                <div style={{
-                    flex: 1,
-                    background: 'rgba(120,100,255,0.08)',
-                    borderRadius: '8px',
-                    padding: '8px',
-                    textAlign: 'center',
-                    border: '1px solid rgba(120,100,255,0.15)',
-                }}>
-                    <div style={{ fontSize: '9px', color: '#888', textTransform: 'uppercase', marginBottom: '2px' }}>Smart Γ Red.</div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'monospace', color: avgGammaRed > 0 ? '#a78bfa' : '#f87171' }}>
-                        {avgGammaRed > 0 ? '+' : ''}{avgGammaRed.toFixed(1)}%
                     </div>
                 </div>
             </div>
@@ -183,7 +158,6 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
                         <th style={thStyle}></th>
                         <th style={{ ...thStyle, color: '#fbbf24' }}>Naive</th>
                         <th style={{ ...thStyle, color: '#4ade80' }}>Smart</th>
-                        <th style={{ ...thStyle, color: '#a78bfa' }}>Γ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -192,7 +166,6 @@ export default function ComparisonResults({ runs, onClose }: ComparisonResultsPr
                             <td style={tdStyle}>{row.label}</td>
                             <td style={{ ...tdStyle, textAlign: 'center', fontFamily: 'monospace', color: row.best === 'naive' ? '#fbbf24' : '#666' }}>{row.naive}</td>
                             <td style={{ ...tdStyle, textAlign: 'center', fontFamily: 'monospace', color: row.best === 'smart' ? '#4ade80' : '#666' }}>{row.smart}</td>
-                            <td style={{ ...tdStyle, textAlign: 'center', fontFamily: 'monospace', color: row.best === 'gamma' ? '#a78bfa' : '#666' }}>{row.gamma}</td>
                         </tr>
                     ))}
                 </tbody>

@@ -1,14 +1,12 @@
 import { SWITCHING_DELTA, T_SAFETY, MAX_INTERCEPTORS_PER_MISSILE } from '../types/global'
 import type { ActiveMissile, ActiveInterceptor, DefenseAlgorithm } from '../types/simulationTypes'
 import { computeSmartScore } from './scoringEngine'
-import { computeSmartGammaScore } from './smartGammaEngine'
 import { computeNaiveScore } from './naiveEngine'
 
 type ScoringFn = (missile: ActiveMissile) => number
 
 function getScoringFunction(algorithm: DefenseAlgorithm): ScoringFn {
     if (algorithm === 'smart') return computeSmartScore
-    if (algorithm === 'smartGamma') return computeSmartGammaScore
     return computeNaiveScore
 }
 

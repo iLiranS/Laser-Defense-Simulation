@@ -38,4 +38,4 @@ export const DWELL_TIME: Record<MissileType, number> = {
 export const T_SAFETY = 0.01          // safety margin: if TTI < D_rem + T_SAFETY → lost cause
 export const EPSILON = 0.0001         // numerical stability for division
 export const SWITCHING_DELTA = 0.1   // penalty threshold for target switching (hysteresis)
-export const MAX_INTERCEPTORS_PER_MISSILE = 2 // Max interceptors allowed to target a single missile
+export const MAX_INTERCEPTORS_PER_MISSILE = 3 // Max interceptors allowed to target a single missile

@@ -66,7 +66,7 @@ export default function SimulationPanel() {
         const interceptorPositions = [...store.activeInterceptors.values()]
             .map(i => i.position.clone())
 
-        const runs: { naive: ReturnType<typeof runHeadlessSimulation>; smart: ReturnType<typeof runHeadlessSimulation>; smartGamma: ReturnType<typeof runHeadlessSimulation> }[] = []
+        const runs: { naive: ReturnType<typeof runHeadlessSimulation>; smart: ReturnType<typeof runHeadlessSimulation> }[] = []
 
         for (let run = 0; run < comparisonRuns; run++) {
             // Generate fresh random scenario for this run
@@ -90,9 +90,8 @@ export default function SimulationPanel() {
 
             const naiveResult = runHeadlessSimulation({ ...baseConfig, algorithm: 'naive' })
             const smartResult = runHeadlessSimulation({ ...baseConfig, algorithm: 'smart' })
-            const smartGammaResult = runHeadlessSimulation({ ...baseConfig, algorithm: 'smartGamma' })
 
-            runs.push({ naive: naiveResult, smart: smartResult, smartGamma: smartGammaResult })
+            runs.push({ naive: naiveResult, smart: smartResult })
         }
 
         setComparisonResults({ runs })
@@ -141,7 +140,7 @@ export default function SimulationPanel() {
                         Algorithm
                     </label>
                     <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                        {(['naive', 'smart', 'smartGamma'] as DefenseAlgorithm[]).map(alg => (
+                        {(['naive', 'smart'] as DefenseAlgorithm[]).map(alg => (
                             <button
                                 key={alg}
                                 onClick={() => handleAlgorithmChange(alg)}
@@ -162,7 +161,7 @@ export default function SimulationPanel() {
                                     outline: algorithm === alg ? `1px solid ${alg === 'smart' ? 'rgba(80,200,120,0.5)' : 'rgba(200,160,80,0.5)'}` : '1px solid transparent',
                                 }}
                             >
-                                {alg === 'naive' ? 'Naive' : alg === 'smart' ? 'Smart' : 'Smart Γ'}
+                                {alg === 'naive' ? 'Naive' : 'Smart'}
                             </button>
                         ))}
                     </div>
