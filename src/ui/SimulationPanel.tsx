@@ -86,6 +86,7 @@ export default function SimulationPanel() {
                 radarRadius: store.radarRadius,
                 speed: missileSpeed,
                 gravity,
+                maxInterceptorsPerMissile: store.maxInterceptorsPerMissile,
             }
 
             const naiveResult = runHeadlessSimulation({ ...baseConfig, algorithm: 'naive' })

@@ -29,6 +29,7 @@ interface SimulationStore {
     // Radar (global detection sphere)
     radarCenter: THREE.Vector3
     radarRadius: number
+    maxInterceptorsPerMissile: number
 
     // Wave configuration
     waveConfig: WaveConfig
@@ -43,6 +44,7 @@ interface SimulationStore {
     setPhase: (phase: SimulationPhase) => void
     setRadarCenter: (center: THREE.Vector3) => void
     setRadarRadius: (radius: number) => void
+    setMaxInterceptorsPerMissile: (val: number) => void
     setWaveConfig: (config: Partial<WaveConfig>) => void
     setTotalWaves: (count: number) => void
 
@@ -77,6 +79,7 @@ export const useSimulationStore = create<SimulationStore>()((set, _) => ({
 
     radarCenter: sphericalToCartesian({ lat: 31.77 * (Math.PI / 180), long: 35.21 * (Math.PI / 180) }).normalize(), // Centers around Jerusalem
     radarRadius: 0.15,
+    maxInterceptorsPerMissile: 3,
 
     waveConfig: {
         missileCount: 150,
@@ -103,6 +106,7 @@ export const useSimulationStore = create<SimulationStore>()((set, _) => ({
     setPhase: (phase) => set({ phase }),
     setRadarCenter: (radarCenter) => set({ radarCenter }),
     setRadarRadius: (radarRadius) => set({ radarRadius }),
+    setMaxInterceptorsPerMissile: (maxInterceptorsPerMissile) => set({ maxInterceptorsPerMissile }),
     setWaveConfig: (config) => set((s) => ({
         waveConfig: { ...s.waveConfig, ...config },
     })),

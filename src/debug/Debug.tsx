@@ -76,6 +76,14 @@ const Debug = () => {
             step: 0.005,
             onChange: (v: number) => useSimulationStore.getState().setRadarRadius(v),
         },
+        maxInterceptorsPerMissile: {
+            value: simStore.maxInterceptorsPerMissile,
+            label: 'Max Interceptors/Missile',
+            min: 1,
+            max: 10,
+            step: 1,
+            onChange: (v: number) => useSimulationStore.getState().setMaxInterceptorsPerMissile(v),
+        },
         'Preset: Light Attack': button(() => {
             useSimulationStore.getState().setWaveConfig({ missileCount: 25, interval: 10 })
             useSimulationStore.getState().setTotalWaves(3)

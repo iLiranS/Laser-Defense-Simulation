@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { T_SAFETY, MAX_INTERCEPTORS_PER_MISSILE } from '../types/global'
+import { T_SAFETY } from '../types/global'
 import type { ActiveMissile, ActiveInterceptor, DefenseAlgorithm, WaveConfig, MissileSnapshot, SimulationResult } from '../types/simulationTypes'
 import { classifyImpactZone } from '../data/cityData'
 import { predictMissileImpact } from '../objects/missile/utils/predictMissileImpact'
@@ -20,6 +20,7 @@ export interface HeadlessSimConfig {
     algorithm: DefenseAlgorithm
     speed: number
     gravity: number
+    maxInterceptorsPerMissile?: number
 }
 
 /**
@@ -36,7 +37,7 @@ export function runHeadlessSimulation(config: HeadlessSimConfig): SimulationResu
     const {
         missiles: missileSnapshots, waveConfig, totalWaves,
         interceptorPositions, radarCenter, radarRadius,
-        algorithm, speed, gravity,
+        algorithm, speed, gravity, maxInterceptorsPerMissile = 3,
     } = config
 
     // Create interceptors
@@ -82,10 +83,10 @@ export function runHeadlessSimulation(config: HeadlessSimConfig): SimulationResu
         }
 
         // ── Process each missile ──
-        processMissiles(activeMissiles, interceptors, elapsedTime, radarCenter, radarRadius, gravity, algorithm, TICK_DELTA)
+        processMissiles(activeMissiles, interceptors, elapsedTime, radarCenter, radarRadius, gravity, algorithm, TICK_DELTA, maxInterceptorsPerMissile)
 
         // ── Run assignment engine ──
-        runAssignment(activeMissiles, interceptors, algorithm)
+        runAssignment(activeMissiles, interceptors, algorithm, maxInterceptorsPerMissile)
 
         // ── Check completion ──
         if (activeMissiles.size > 0 && allResolved(activeMissiles, elapsedTime)) {
@@ -109,6 +110,7 @@ function processMissiles(
     gravity: number,
     _algorithm: DefenseAlgorithm,
     delta: number,
+    maxInterceptorsPerMissile: number,
 ): void {
     for (const missile of missiles.values()) {
         if (elapsedTime < missile.spawnDelay) continue
@@ -173,7 +175,7 @@ function processMissiles(
                 }
             }
 
-            const maxPossibleDrainRate = MAX_INTERCEPTORS_PER_MISSILE
+            const maxPossibleDrainRate = maxInterceptorsPerMissile
             const theoreticalMinTimeNeeded = missile.dwellTimeRemaining / maxPossibleDrainRate
 
             // Lost cause — both algorithms

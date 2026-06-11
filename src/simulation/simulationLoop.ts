@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { T_SAFETY, DWELL_TIME, MissileType, ZoneType, MAX_INTERCEPTORS_PER_MISSILE } from '../types/global'
+import { T_SAFETY, DWELL_TIME, MissileType, ZoneType } from '../types/global'
 import type { ActiveMissile, WaveConfig, MissileSnapshot } from '../types/simulationTypes'
 import { classifyImpactZone, CITIES, type City } from '../data/cityData'
 import { predictMissileImpact } from '../objects/missile/utils/predictMissileImpact'
@@ -80,7 +80,7 @@ export function simulationTick(
     const scaledDelta = delta
     store.advanceTime(scaledDelta)
 
-    const { activeMissiles, activeInterceptors, algorithm, radarCenter, radarRadius, elapsedTime } = store
+    const { activeMissiles, activeInterceptors, algorithm, radarCenter, radarRadius, elapsedTime, maxInterceptorsPerMissile } = store
 
     // We'll work directly with the store's map references for performance
     // and batch the update via a single set call at the end
@@ -170,7 +170,7 @@ export function simulationTick(
                 }
             }
 
-            const maxPossibleDrainRate = MAX_INTERCEPTORS_PER_MISSILE // Up to max allowed interceptors
+            const maxPossibleDrainRate = maxInterceptorsPerMissile // Up to max allowed interceptors
             const theoreticalMinTimeNeeded = missile.dwellTimeRemaining / maxPossibleDrainRate
 
             // Lost cause check — skip missiles that can't be intercepted in time even with max interceptors
@@ -191,7 +191,7 @@ export function simulationTick(
     }
 
     // ── Run assignment engine ──
-    runAssignment(activeMissiles, activeInterceptors, algorithm)
+    runAssignment(activeMissiles, activeInterceptors, algorithm, maxInterceptorsPerMissile)
 
     // ── Check completion ──
     const allResolved = checkAllResolved(activeMissiles, elapsedTime)

@@ -1,4 +1,4 @@
-import { SWITCHING_DELTA, T_SAFETY, MAX_INTERCEPTORS_PER_MISSILE } from '../types/global'
+import { SWITCHING_DELTA, T_SAFETY } from '../types/global'
 import type { ActiveMissile, ActiveInterceptor, DefenseAlgorithm } from '../types/simulationTypes'
 import { computeSmartScore } from './scoringEngine'
 import { computeNaiveScore } from './naiveEngine'
@@ -19,6 +19,7 @@ export function runAssignment(
     missiles: Map<string, ActiveMissile>,
     interceptors: Map<string, ActiveInterceptor>,
     algorithm: DefenseAlgorithm,
+    maxInterceptorsPerMissile: number,
 ): void {
     const scoreFn = getScoringFunction(algorithm)
 
@@ -54,7 +55,7 @@ export function runAssignment(
         missile.score = scoreFn(missile)
         const currentEngagements = engagementCounts.get(missile.id) || 0
 
-        if (currentEngagements < MAX_INTERCEPTORS_PER_MISSILE && missile.score > 0) {
+        if (currentEngagements < maxInterceptorsPerMissile && missile.score > 0) {
             let marginalScore = missile.score
             let isHelper = false
 
